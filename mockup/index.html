@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#15233B">
+<title>Walk Planner Mockup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #15233B;
+    --ink-2: #4A5872;
+    --ink-3: #8592A8;
+    --mist: #EDF0F5;
+    --paper: #FFFFFF;
+    --line: #DCE1EA;
+    --speed: #2D5BE3;
+    --speed-soft: #E3EAFD;
+    --incline: #E8992A;
+    --incline-soft: #FCEFD9;
+    --actual: #2F9467;
+    --danger: #C8433A;
+    --body: "Barlow", system-ui, sans-serif;
+    --num: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: #D7DCE5;
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-font-smoothing: antialiased;
+  }
+  button { font: inherit; color: inherit; border: 0; background: none; cursor: pointer; padding: 0; }
+  :focus-visible { outline: 3px solid var(--speed); outline-offset: 2px; border-radius: 6px; }
+  .num { font-family: var(--num); font-variant-numeric: tabular-nums; }
+
+  /* ---------- Review layout (desktop) ---------- */
+  .stage { min-height: 100%; display: flex; gap: 40px; align-items: center; justify-content: center; padding: 32px 16px; }
+  .guide { width: 240px; align-self: center; }
+  .guide h1 { font-size: 22px; margin: 0 0 4px; }
+  .guide p { color: var(--ink-2); margin: 0 0 20px; font-size: 14px; }
+  .guide ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+  .guide li button { width: 100%; text-align: left; padding: 10px 12px; border-radius: 10px; font-weight: 500; color: var(--ink-2); display: flex; gap: 10px; }
+  .guide li button span { color: var(--ink-3); width: 18px; }
+  .guide li button[aria-current="true"] { background: var(--paper); color: var(--ink); }
+  .guide .note { margin-top: 20px; font-size: 13px; color: var(--ink-3); }
+
+  .phone {
+    width: 412px; height: 880px; background: var(--mist); border-radius: 44px;
+    border: 10px solid var(--ink); position: relative; overflow: hidden;
+    box-shadow: 0 30px 60px -20px rgba(21,35,59,.45);
+  }
+  @media (max-width: 760px) {
+    body { background: var(--mist); }
+    .stage { padding: 0; display: block; }
+    .guide { display: none; }
+    .phone { width: 100%; height: 100dvh; border: 0; border-radius: 0; box-shadow: none; }
+  }
+
+  /* ---------- App shell ---------- */
+  .statusbar { height: 32px; display: flex; justify-content: space-between; align-items: center; padding: 0 22px; font-size: 13px; font-weight: 600; }
+  .screen { position: absolute; inset: 32px 0 0 0; display: none; flex-direction: column; }
+  .screen.active { display: flex; }
+  .scroll { flex: 1; overflow-y: auto; padding: 8px 16px 24px; }
+  .scroll::-webkit-scrollbar { display: none; }
+  .topbar { display: flex; align-items: center; gap: 8px; padding: 8px 8px 4px; min-height: 52px; }
+  .topbar h2 { font-size: 18px; margin: 0; flex: 1; }
+  .icon-btn { width: 44px; height: 44px; border-radius: 22px; display: grid; place-items: center; }
+  .icon-btn:active { background: var(--line); }
+  svg.i { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .nav { display: flex; background: var(--paper); border-top: 1px solid var(--line); padding: 6px 8px 14px; }
+  .nav button { flex: 1; display: grid; justify-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 6px 0; }
+  .nav button[aria-current="true"] { color: var(--ink); }
+  .nav button[aria-current="true"] svg { stroke: var(--speed); }
+
+  .big-btn {
+    width: 100%; height: 64px; border-radius: 32px; background: var(--speed); color: #fff;
+    font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .big-btn:active { transform: scale(.98); }
+  .big-btn.secondary { background: var(--paper); color: var(--ink); border: 2px solid var(--line); }
+  .sticky-foot { padding: 12px 16px 18px; background: linear-gradient(transparent, var(--mist) 30%); }
+
+  .card { background: var(--paper); border-radius: 22px; padding: 18px; }
+  .muted { color: var(--ink-2); }
+  .small { font-size: 14px; }
+
+  .chip { height: 40px; padding: 0 16px; border-radius: 20px; background: var(--paper); border: 1.5px solid var(--line); font-weight: 600; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .chip[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chips.row { flex-wrap: nowrap; overflow-x: auto; margin: 0 -16px; padding: 0 16px; }
+  .chips.row::-webkit-scrollbar { display: none; }
+
+  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--ink-2); font-weight: 500; }
+  .legend i { display: inline-block; width: 14px; height: 4px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+  .legend i.dash { background: repeating-linear-gradient(90deg, var(--ink-3) 0 4px, transparent 4px 7px); }
+
+  /* ---------- Home ---------- */
+  .hello { padding: 8px 0 16px; }
+  .hello .date { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+  .hello h1 { font-size: 30px; line-height: 1.1; margin: 2px 0 0; letter-spacing: -.01em; }
+  .plan-card { padding: 20px 18px 16px; }
+  .plan-card .why { font-size: 14px; color: var(--ink-2); margin: 6px 0 14px; }
+  .plan-card h3 { font-size: 22px; margin: 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 14px 0 4px; }
+  .stats div { padding-right: 8px; }
+  .stats b { display: block; font-family: var(--num); font-size: 30px; line-height: 1; font-weight: 600; }
+  .stats small { font-size: 13px; color: var(--ink-2); }
+  .stats .s b { color: var(--speed); }
+  .stats .n b { color: var(--incline); }
+  .section-h { font-size: 15px; font-weight: 700; margin: 22px 0 10px; }
+  .readiness { display: flex; gap: 12px; }
+  .readiness .card { flex: 1; padding: 14px; }
+  .readiness b { font-family: var(--num); font-size: 26px; font-weight: 600; display: block; line-height: 1.05; }
+  .readiness small { color: var(--ink-2); font-size: 13px; }
+  .sync { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); margin-top: 18px; }
+  .sync::before { content: ""; width: 8px; height: 8px; border-radius: 4px; background: var(--actual); }
+  .chat-fab {
+    position: absolute; right: 16px; bottom: 92px; height: 52px; padding: 0 20px 0 16px; border-radius: 26px;
+    background: var(--ink); color: #fff; font-weight: 600; display: flex; align-items: center; gap: 8px;
+    box-shadow: 0 8px 20px -6px rgba(21,35,59,.5); z-index: 5;
+  }
+  .start-row { margin-top: 16px; }
+
+  /* ---------- Setup ---------- */
+  .steps { display: flex; gap: 6px; padding: 0 16px 12px; }
+  .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
+  .steps span.on { background: var(--ink); }
+  .q { font-size: 26px; font-weight: 700; line-height: 1.15; margin: 8px 0 6px; }
+  .q-sub { color: var(--ink-2); margin: 0 0 22px; }
+  .time-read { text-align: center; margin: 18px 0 8px; }
+  .time-read b { font-family: var(--num); font-size: 96px; line-height: .9; font-weight: 600; }
+  .time-read span { font-size: 20px; font-weight: 600; color: var(--ink-2); margin-left: 4px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 44px; background: transparent; }
+  input[type=range]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: linear-gradient(90deg, var(--ink) var(--p, 40%), var(--line) var(--p, 40%)); }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 32px; height: 32px; border-radius: 16px; background: #fff; border: 3px solid var(--ink); margin-top: -11px; }
+  input[type=range]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--line); }
+  input[type=range]::-moz-range-progress { height: 10px; border-radius: 5px; background: var(--ink); }
+  input[type=range]::-moz-range-thumb { width: 26px; height: 26px; border-radius: 16px; background: #fff; border: 3px solid var(--ink); }
+  .range-ends { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-3); }
+
+  .cond { background: var(--paper); border-radius: 20px; padding: 16px; margin-bottom: 12px; }
+  .cond-head { display: flex; align-items: center; gap: 14px; }
+  .cond-head .t { flex: 1; }
+  .cond-head b { display: block; font-size: 17px; }
+  .cond-head small { color: var(--ink-2); font-size: 14px; }
+  .cond-body { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .cond.on .cond-body { display: block; }
+  .switch { width: 56px; height: 32px; border-radius: 16px; background: var(--line); position: relative; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 13px; background: #fff; transition: transform .15s; box-shadow: 0 1px 3px rgba(21,35,59,.3); }
+  .switch[aria-checked="true"] { background: var(--ink); }
+  .switch[aria-checked="true"]::after { transform: translateX(24px); }
+  .sub-label { font-size: 14px; font-weight: 600; margin: 0 0 8px; color: var(--ink-2); }
+  .sub-label + .chips { margin-bottom: 4px; }
+  .sleep-val { font-family: var(--num); font-size: 28px; font-weight: 600; }
+
+  .styles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .style-card { background: var(--paper); border-radius: 18px; padding: 12px 12px 14px; text-align: left; border: 2px solid transparent; }
+  .style-card[aria-pressed="true"] { border-color: var(--ink); }
+  .style-card svg { width: 100%; height: 40px; display: block; margin-bottom: 8px; }
+  .style-card b { display: block; font-size: 16px; }
+  .style-card small { color: var(--ink-2); font-size: 13px; line-height: 1.3; display: block; }
+  .style-card.wide { grid-column: span 2; }
+
+  /* ---------- Preview ---------- */
+  .chart-card { padding: 16px 12px 12px; }
+  .chart-card .legend { padding: 0 6px 6px; }
+  .step-list { background: var(--paper); border-radius: 22px; padding: 4px 0; margin-top: 12px; }
+  .step-row { display: grid; grid-template-columns: 64px 1fr 1fr; align-items: center; padding: 12px 18px; border-bottom: 1px solid var(--line); }
+  .step-row:last-child { border-bottom: 0; }
+  .step-row .t { font-family: var(--num); font-size: 18px; color: var(--ink-2); font-weight: 500; }
+  .step-row .v { font-family: var(--num); font-size: 26px; font-weight: 600; line-height: 1; }
+  .step-row .v small { font-family: var(--body); font-size: 13px; font-weight: 500; color: var(--ink-3); margin-left: 3px; }
+  .step-row .v.s { color: var(--speed); }
+  .step-row .v.n { color: var(--incline); }
+  .step-row .lbl { grid-column: 2 / 4; font-size: 13px; color: var(--ink-3); margin-top: 2px; }
+  .offline-note { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; color: var(--ink-2); margin-top: 14px; padding: 0 4px; }
+  .offline-note svg { flex: none; width: 20px; height: 20px; stroke: var(--actual); }
+
+  /* ---------- Run ---------- */
+  #run { background: var(--ink); color: #fff; inset: 0; padding-top: 32px; }
+  #run .topbar { color: #fff; }
+  .run-time { text-align: center; padding: 4px 16px 0; }
+  .run-time small { color: #9BA8BF; font-size: 15px; font-weight: 500; }
+  .run-time b { display: block; font-family: var(--num); font-size: 44px; font-weight: 600; line-height: 1; }
+  .run-main { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 20px; }
+  .metric { display: flex; flex-direction: column; align-items: center; border-radius: 28px; padding: 4px 22px 8px; }
+  .metric .label { font-size: 17px; font-weight: 600; }
+  .metric .val { font-family: var(--num); font-weight: 700; font-size: 132px; line-height: .95; letter-spacing: -.02em; }
+  .metric .unit { font-size: 22px; font-weight: 600; color: #9BA8BF; margin-left: 4px; }
+  .metric.s .label { color: #8EA9FF; }
+  .metric.n .label { color: #FFC572; }
+  .metric.flash { animation: flash 1.6s ease-out; }
+  @keyframes flash { 0% { background: rgba(255,255,255,.22); } 100% { background: transparent; } }
+  @media (prefers-reduced-motion: reduce) { .metric.flash { animation: none; outline: 2px solid #fff; } }
+
+  .next { margin: 0 20px; background: rgba(255,255,255,.08); border-radius: 22px; padding: 14px 18px; display: flex; align-items: center; gap: 16px; }
+  .next .count { font-family: var(--num); font-size: 44px; font-weight: 600; line-height: 1; min-width: 92px; }
+  .next small { display: block; color: #9BA8BF; font-size: 14px; }
+  .next b { font-size: 18px; }
+  .next b .s { color: #8EA9FF; } .next b .n { color: #FFC572; }
+  .progress { height: 6px; background: rgba(255,255,255,.12); border-radius: 3px; margin: 10px 0 0; overflow: hidden; }
+  .progress i { display: block; height: 100%; background: #fff; width: 0; }
+  .run-map { padding: 12px 16px 0; }
+  .run-ctrl { display: flex; gap: 14px; padding: 16px 20px 26px; }
+  .run-ctrl button { height: 84px; border-radius: 42px; font-size: 20px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .run-ctrl .pause { flex: 1.6; background: #fff; color: var(--ink); }
+  .run-ctrl .stop { flex: 1; background: var(--danger); color: #fff; }
+  .run-ctrl svg.i { width: 30px; height: 30px; }
+  .offline-pill { font-size: 13px; color: #9BA8BF; display: flex; align-items: center; gap: 6px; }
+  .offline-pill::before { content: ""; width: 8px; height: 8px; border-radius: 4px; background: #5BD39B; }
+  .change-banner { position: absolute; left: 20px; right: 20px; top: 96px; background: #fff; color: var(--ink); border-radius: 18px; padding: 14px 18px; font-weight: 700; font-size: 18px; text-align: center; opacity: 0; transform: translateY(-10px); transition: .25s; pointer-events: none; }
+  .change-banner.show { opacity: 1; transform: none; }
+
+  /* ---------- Summary ---------- */
+  .done { padding: 8px 0 14px; }
+  .done h1 { font-size: 30px; margin: 0; line-height: 1.1; }
+  .done p { margin: 6px 0 0; color: var(--ink-2); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .grid2 .card { padding: 14px 16px; }
+  .grid2 b { font-family: var(--num); font-size: 30px; font-weight: 600; display: block; line-height: 1.05; }
+  .grid2 small { font-size: 13px; color: var(--ink-2); }
+  .grid2 em { font-style: normal; font-size: 13px; font-weight: 600; color: var(--actual); }
+  .feel { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+  .feel button { height: 56px; border-radius: 16px; background: var(--paper); border: 1.5px solid var(--line); font-weight: 600; font-size: 14px; }
+  .feel button[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .insight { background: var(--speed-soft); border-radius: 20px; padding: 16px; margin-top: 12px; font-size: 15px; }
+  .insight b { display: block; margin-bottom: 4px; }
+
+  /* ---------- History / Profile ---------- */
+  .week { display: flex; gap: 6px; align-items: flex-end; height: 92px; margin: 10px 0 6px; }
+  .week div { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+  .week i { width: 100%; max-width: 30px; border-radius: 8px; background: var(--speed); }
+  .week i.zero { background: var(--line); height: 6px; }
+  .week span { font-size: 12px; color: var(--ink-3); font-weight: 600; }
+  .hist-item { display: flex; gap: 14px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--line); text-align: left; width: 100%; }
+  .hist-item:last-child { border-bottom: 0; }
+  .hist-item svg { width: 84px; height: 36px; flex: none; }
+  .hist-item .t { flex: 1; }
+  .hist-item b { display: block; font-size: 16px; }
+  .hist-item small { color: var(--ink-2); font-size: 14px; }
+  .hist-item .m { font-family: var(--num); font-size: 22px; font-weight: 600; text-align: right; }
+  .hist-item .m small { display: block; font-family: var(--body); font-size: 12px; color: var(--ink-3); font-weight: 500; }
+
+  .who { display: flex; gap: 14px; align-items: center; padding: 6px 0 18px; }
+  .avatar { width: 64px; height: 64px; border-radius: 32px; background: var(--ink); color: #fff; display: grid; place-items: center; font-size: 26px; font-weight: 700; }
+  .who h1 { font-size: 24px; margin: 0; }
+  .group { background: var(--paper); border-radius: 20px; padding: 2px 0; margin-bottom: 14px; }
+  .group-h { font-size: 15px; font-weight: 700; margin: 18px 4px 8px; }
+  .prow { display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-height: 60px; border-bottom: 1px solid var(--line); }
+  .prow:last-child { border-bottom: 0; }
+  .prow .t { flex: 1; }
+  .prow .t small { display: block; font-size: 13px; color: var(--ink-3); }
+  .stepper { display: flex; align-items: center; gap: 4px; }
+  .stepper button { width: 40px; height: 40px; border-radius: 20px; background: var(--mist); font-size: 22px; font-weight: 600; }
+  .stepper output { font-family: var(--num); font-size: 22px; font-weight: 600; min-width: 64px; text-align: center; }
+  .zones { display: flex; height: 12px; border-radius: 6px; overflow: hidden; margin: 6px 16px 4px; }
+  .zones i { flex: 1; }
+  .zones-l { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); padding: 0 16px 14px; }
+  .tag { font-size: 13px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: var(--mist); color: var(--ink-2); }
+  .tag.ok { background: #DDF2E7; color: #1F6E4B; }
+
+  /* ---------- Chat sheet ---------- */
+  .scrim { position: absolute; inset: 0; background: rgba(21,35,59,.45); opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 20; }
+  .scrim.show { opacity: 1; pointer-events: auto; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; height: 74%; background: var(--paper); border-radius: 28px 28px 0 0; z-index: 21; transform: translateY(105%); transition: transform .28s cubic-bezier(.2,.8,.2,1); display: flex; flex-direction: column; }
+  .sheet.show { transform: none; }
+  @media (prefers-reduced-motion: reduce) { .sheet, .scrim { transition: none; } }
+  .grab { width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 10px auto 4px; }
+  .sheet-h { display: flex; align-items: center; padding: 4px 8px 4px 20px; }
+  .sheet-h h3 { flex: 1; margin: 0; font-size: 18px; }
+  .msgs { flex: 1; overflow-y: auto; padding: 8px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .msg { max-width: 84%; padding: 10px 14px; border-radius: 18px; font-size: 15px; }
+  .msg.bot { background: var(--mist); border-bottom-left-radius: 6px; }
+  .msg.me { background: var(--ink); color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; }
+  .msg .apply { margin-top: 10px; height: 40px; padding: 0 16px; border-radius: 20px; background: var(--speed); color: #fff; font-weight: 600; font-size: 14px; }
+  .suggest { padding: 8px 16px 4px; }
+  .composer { display: flex; gap: 8px; padding: 8px 12px 18px; align-items: center; }
+  .composer input { flex: 1; height: 50px; border-radius: 25px; border: 1.5px solid var(--line); padding: 0 18px; font: inherit; background: var(--mist); color: var(--ink); }
+  .composer button { width: 50px; height: 50px; border-radius: 25px; background: var(--ink); color: #fff; display: grid; place-items: center; flex: none; }
+
+  .toast { position: absolute; left: 16px; right: 16px; bottom: 96px; background: var(--ink); color: #fff; padding: 14px 18px; border-radius: 16px; font-weight: 500; z-index: 30; opacity: 0; transform: translateY(8px); transition: .2s; pointer-events: none; }
+  .toast.show { opacity: 1; transform: none; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <aside class="guide" aria-label="Mockup screens">
+    <h1>Walk planner</h1>
+    <p>Clickable mockup of the Android app. Tap through the phone, or jump to a screen here.</p>
+    <ol id="guideList"></ol>
+    <p class="note">Run mode ticks in real time. Use “Skip to next change” on the run screen to see a speed change.</p>
+  </aside>
+
+  <div class="phone" id="phone">
+    <div class="statusbar"><span>7:12</span><span>5G ▮▮▮ 82%</span></div>
+
+    <!-- ================= HOME ================= -->
+    <section class="screen active" id="home" aria-label="Home">
+      <div class="scroll">
+        <div class="hello">
+          <div class="date">Monday, 9 November</div>
+          <h1>Good morning, Am</h1>
+        </div>
+
+        <div class="card plan-card">
+          <h3 id="homeTitle">Rolling hills</h3>
+          <p class="why" id="homeWhy">Picked for you: 7h 10m sleep, legs recovered, and you asked for hills twice this week.</p>
+          <div id="homeChart"></div>
+          <div class="stats">
+            <div><b id="homeDur" class="num">35</b><small>minutes</small></div>
+            <div class="s"><b id="homeSpeed" class="num">4.5–5.8</b><small>km/h</small></div>
+            <div class="n"><b id="homeInc" class="num">1–8</b><small>% incline</small></div>
+          </div>
+        </div>
+
+        <div class="chips row start-row" role="group" aria-label="Quick adjust">
+          <button class="chip" aria-pressed="false" data-adj="shorter">Shorter</button>
+          <button class="chip" aria-pressed="false" data-adj="easier">Easier</button>
+          <button class="chip" aria-pressed="false" data-adj="flat">No incline</button>
+          <button class="chip" data-go="setup">Change plan</button>
+        </div>
+
+        <div style="margin-top:16px">
+          <button class="big-btn" data-go="preview">
+            <svg class="i" viewBox="0 0 24 24" style="fill:#fff;stroke:none"><path d="M7 4.5v15l13-7.5z"/></svg>
+            Start
+          </button>
+        </div>
+
+        <div class="section-h">Today</div>
+        <div class="readiness">
+          <div class="card"><b class="num">7h 10m</b><small>Sleep last night</small></div>
+          <div class="card"><b class="num">54</b><small>Resting HR</small></div>
+          <div class="card"><b class="num">3 / 4</b><small>Walks this week</small></div>
+        </div>
+        <div class="sync">Synced from Health Connect at 6:58</div>
+        <div style="height:60px"></div>
+      </div>
+      <button class="chat-fab" data-chat>
+        <svg class="i" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>
+        Ask for changes
+      </button>
+      <nav class="nav" data-nav></nav>
+    </section>
+
+    <!-- ================= SETUP ================= -->
+    <section class="screen" id="setup" aria-label="Set up plan">
+      <div class="topbar">
+        <button class="icon-btn" id="setupBack" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2 id="setupStepName">Step 1 of 3</h2>
+      </div>
+      <div class="steps" aria-hidden="true"><span class="on"></span><span></span><span></span></div>
+
+      <div class="scroll" id="setup1">
+        <p class="q">How long do you have?</p>
+        <p class="q-sub">Includes warm-up and cool-down.</p>
+        <div class="time-read"><b class="num" id="timeVal">35</b><span>min</span></div>
+        <input type="range" id="timeRange" min="10" max="90" step="5" value="35" aria-label="Session length in minutes">
+        <div class="range-ends"><span>10 min</span><span>90 min</span></div>
+        <div class="chips" style="margin-top:20px" id="timeChips">
+          <button class="chip" data-t="20">20 min</button>
+          <button class="chip" data-t="30">30 min</button>
+          <button class="chip" data-t="45">45 min</button>
+          <button class="chip" data-t="60">60 min</button>
+        </div>
+      </div>
+
+      <div class="scroll" id="setup2" hidden>
+        <p class="q">Anything different today?</p>
+        <p class="q-sub">Only for this session. Your profile stays the same.</p>
+
+        <div class="cond" data-cond>
+          <div class="cond-head">
+            <div class="t"><b>Low sleep</b><small>Lowers intensity and caps heart rate</small></div>
+            <button class="switch" role="switch" aria-checked="false" aria-label="Low sleep"></button>
+          </div>
+          <div class="cond-body">
+            <p class="sub-label">Hours slept</p>
+            <div style="display:flex;align-items:center;gap:14px">
+              <input type="range" min="3" max="8" step=".5" value="5" id="sleepRange" aria-label="Hours slept">
+              <span class="sleep-val num" id="sleepVal">5h</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="cond" data-cond>
+          <div class="cond-head">
+            <div class="t"><b>Menstrual cycle</b><small>Adjusts effort to how you feel</small></div>
+            <button class="switch" role="switch" aria-checked="false" aria-label="Menstrual cycle"></button>
+          </div>
+          <div class="cond-body">
+            <p class="sub-label">Phase</p>
+            <div class="chips" data-single>
+              <button class="chip" aria-pressed="true">Period</button>
+              <button class="chip" aria-pressed="false">Follicular</button>
+              <button class="chip" aria-pressed="false">Ovulation</button>
+              <button class="chip" aria-pressed="false">Luteal</button>
+            </div>
+            <p class="sub-label" style="margin-top:14px">Cramps or fatigue</p>
+            <div class="chips" data-single>
+              <button class="chip" aria-pressed="false">None</button>
+              <button class="chip" aria-pressed="true">Mild</button>
+              <button class="chip" aria-pressed="false">Strong</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="cond" data-cond>
+          <div class="cond-head">
+            <div class="t"><b>Injury or pain</b><small>Avoids moves that load the area</small></div>
+            <button class="switch" role="switch" aria-checked="false" aria-label="Injury or pain"></button>
+          </div>
+          <div class="cond-body">
+            <p class="sub-label">Where</p>
+            <div class="chips" data-multi>
+              <button class="chip" aria-pressed="false">Knee</button>
+              <button class="chip" aria-pressed="false">Ankle</button>
+              <button class="chip" aria-pressed="true">Shin</button>
+              <button class="chip" aria-pressed="false">Hip</button>
+              <button class="chip" aria-pressed="false">Lower back</button>
+              <button class="chip" aria-pressed="false">Calf</button>
+            </div>
+            <p class="sub-label" style="margin-top:14px">How bad</p>
+            <div class="chips" data-single>
+              <button class="chip" aria-pressed="true">A little sore</button>
+              <button class="chip" aria-pressed="false">Hurts when walking</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="scroll" id="setup3" hidden>
+        <p class="q">Pick a style</p>
+        <p class="q-sub">You can still change speeds after you see the plan.</p>
+        <div class="styles" id="styles"></div>
+      </div>
+
+      <div class="sticky-foot">
+        <button class="big-btn" id="setupNext">Next</button>
+      </div>
+    </section>
+
+    <!-- ================= PREVIEW ================= -->
+    <section class="screen" id="preview" aria-label="Plan preview">
+      <div class="topbar">
+        <button class="icon-btn" data-go="home" aria-label="Back"><svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+        <h2 id="prevTitle">Rolling hills, 35 min</h2>
+        <button class="icon-btn" data-chat aria-label="Ask for changes"><svg class="i" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></button>
+      </div>
+      <div class="scroll">
+        <div class="card chart-card">
+          <div class="legend"><span><i style="background:var(--speed)"></i>Speed</span><span><i style="background:var(--incline)"></i>Incline</span></div>
+          <div id="prevChart"></div>
+        </div>
+        <div class="step-list" id="stepList"></div>
+        <div class="offline-note">
+          <svg class="i" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+          <span>Plan saved on this phone. Run mode keeps working without signal.</span>
+        </div>
+      </div>
+      <div class="sticky-foot">
+        <button class="big-btn" data-go="run">
+          <svg class="i" viewBox="0 0 24 24" style="fill:#fff;stroke:none"><path d="M7 4.5v15l13-7.5z"/></svg>
+          Start walk
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= RUN ================= -->
+    <section class="screen" id="run" aria-label="Run mode">
+      <div class="topbar" style="padding:4px 12px">
+        <span class="offline-pill" style="flex:1">Offline ready</span>
+        <button class="small" id="skipBtn" style="color:#9BA8BF;padding:10px">Skip to next change</button>
+      </div>
+      <div class="run-time">
+        <small>Time left</small>
+        <b id="runLeft" class="num">35:00</b>
+      </div>
+      <div class="change-banner" id="banner" role="status" aria-live="assertive"></div>
+
+      <div class="run-main">
+        <div class="metric s" id="mSpeed">
+          <span class="label">Speed</span>
+          <span><span class="val" id="runSpeed">4.5</span><span class="unit">km/h</span></span>
+        </div>
+        <div class="metric n" id="mInc">
+          <span class="label">Incline</span>
+          <span><span class="val" id="runInc">1</span><span class="unit">%</span></span>
+        </div>
+      </div>
+
+      <div class="next">
+        <div class="count num" id="runCount">5:00</div>
+        <div style="flex:1">
+          <small>Next change</small>
+          <b id="runNext"></b>
+          <div class="progress"><i id="runProg"></i></div>
+        </div>
+      </div>
+      <div class="run-map" id="runChart"></div>
+
+      <div class="run-ctrl">
+        <button class="pause" id="pauseBtn">
+          <svg class="i" viewBox="0 0 24 24" id="pauseIcon"><path d="M8 5v14M16 5v14" stroke-width="3.5"/></svg>
+          <span id="pauseTxt">Pause</span>
+        </button>
+        <button class="stop" id="stopBtn">
+          <svg class="i" viewBox="0 0 24 24" style="fill:#fff;stroke:none"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+          Stop
+        </button>
+      </div>
+    </section>
+
+    <!-- ================= SUMMARY ================= -->
+    <section class="screen" id="summary" aria-label="Summary">
+      <div class="topbar">
+        <button class="icon-btn" data-go="home" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+        <h2>Walk summary</h2>
+      </div>
+      <div class="scroll">
+        <div class="done">
+          <h1>34 of 35 minutes done</h1>
+          <p>Rolling hills, Monday 7:15</p>
+        </div>
+        <div class="card chart-card">
+          <div class="legend" style="flex-wrap:wrap;row-gap:4px">
+            <span><i class="dash"></i>Planned</span>
+            <span><i style="background:var(--speed)"></i>Actual speed</span>
+            <span><i style="background:var(--incline)"></i>Actual incline</span>
+          </div>
+          <div id="sumChart"></div>
+        </div>
+        <div class="grid2">
+          <div class="card"><b class="num">3.02</b><small>km walked</small></div>
+          <div class="card"><b class="num">121</b><small>Avg heart rate</small> <em>Zone 2</em></div>
+          <div class="card"><b class="num">186</b><small>m climbed</small></div>
+          <div class="card"><b class="num">248</b><small>kcal</small></div>
+        </div>
+
+        <div class="insight">
+          <b>What changed</b>
+          You lowered the 8% hill to 6% after 2 minutes. Your heart rate stayed under 135, so next time the top hill will start at 7%.
+        </div>
+
+        <div class="section-h">How did it feel?</div>
+        <div class="feel" data-single>
+          <button aria-pressed="false">Too easy</button>
+          <button aria-pressed="false">Easy</button>
+          <button aria-pressed="true">Right</button>
+          <button aria-pressed="false">Hard</button>
+          <button aria-pressed="false">Too hard</button>
+        </div>
+        <div style="margin-top:20px;display:grid;gap:10px">
+          <button class="big-btn" data-go="home" data-toast="Saved to history">Save walk</button>
+          <button class="big-btn secondary" data-toast="Garmin import arrives in phase 1.5">Add Garmin activity</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= HISTORY ================= -->
+    <section class="screen" id="history" aria-label="History">
+      <div class="topbar" style="padding-left:16px"><h2 style="font-size:24px">History</h2></div>
+      <div class="scroll">
+        <div class="card">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <b style="font-size:17px">This week</b>
+            <span class="muted small"><b class="num" style="font-size:22px;color:var(--ink)">142</b> min</span>
+          </div>
+          <div class="week" id="week"></div>
+        </div>
+        <div class="section-h">Recent walks</div>
+        <div class="card" style="padding:4px 18px" id="histList"></div>
+      </div>
+      <nav class="nav" data-nav></nav>
+    </section>
+
+    <!-- ================= PROFILE ================= -->
+    <section class="screen" id="profile" aria-label="Profile">
+      <div class="topbar" style="padding-left:16px"><h2 style="font-size:24px">Profile</h2></div>
+      <div class="scroll">
+        <div class="who">
+          <div class="avatar">A</div>
+          <div><h1>Am</h1><span class="muted small">Walking since March</span></div>
+        </div>
+
+        <div class="group-h">Body</div>
+        <div class="group">
+          <div class="prow"><div class="t">Weight</div>
+            <div class="stepper" data-stepper data-step="0.5" data-unit=" kg"><button aria-label="Decrease">−</button><output>58.0 kg</output><button aria-label="Increase">+</button></div></div>
+          <div class="prow"><div class="t">Max heart rate<small>From your Garmin data</small></div>
+            <div class="stepper" data-stepper data-step="1" data-unit=""><button aria-label="Decrease">−</button><output>186</output><button aria-label="Increase">+</button></div></div>
+          <div class="prow" style="border-bottom:0;padding-bottom:4px"><div class="t">Heart rate zones<small>Plans stay in zones 2–3 unless you pick HIIT</small></div></div>
+          <div class="zones" aria-hidden="true">
+            <i style="background:#C9D3E6"></i><i style="background:#8FC9AA"></i><i style="background:#5FA9DD"></i><i style="background:#F2BE5C"></i><i style="background:#E07B6A"></i>
+          </div>
+          <div class="zones-l"><span>93</span><span>112</span><span>130</span><span>149</span><span>167</span><span>186</span></div>
+        </div>
+
+        <div class="group-h">Treadmill</div>
+        <div class="group">
+          <div class="prow"><div class="t">Max speed</div>
+            <div class="stepper" data-stepper data-step="0.5" data-unit=" km/h"><button aria-label="Decrease">−</button><output>12.0 km/h</output><button aria-label="Increase">+</button></div></div>
+          <div class="prow"><div class="t">Max incline</div>
+            <div class="stepper" data-stepper data-step="1" data-unit="%"><button aria-label="Decrease">−</button><output>15%</output><button aria-label="Increase">+</button></div></div>
+          <div class="prow"><div class="t">Speed steps<small>How the console changes speed</small></div>
+            <div class="chips" data-single><button class="chip" aria-pressed="true">0.1</button><button class="chip" aria-pressed="false">0.5</button></div></div>
+        </div>
+
+        <div class="group-h">Defaults</div>
+        <div class="group">
+          <div class="prow"><div class="t">Usual session length</div><span class="num" style="font-size:22px;font-weight:600">35 min</span></div>
+          <div class="prow"><div class="t">Favourite styles<small>Hills, Pyramid</small></div><svg class="i" viewBox="0 0 24 24" style="color:var(--ink-3)"><path d="M9 5l7 7-7 7"/></svg></div>
+          <div class="prow"><div class="t">Voice cues<small>Arrives in phase 2</small></div><span class="tag">Soon</span></div>
+        </div>
+
+        <div class="group-h">Connections</div>
+        <div class="group">
+          <div class="prow"><div class="t">Health Connect<small>Sleep and heart rate</small></div><span class="tag ok">Connected</span></div>
+          <div class="prow"><div class="t">Garmin Connect<small>Forerunner 165 history</small></div><span class="tag">Phase 1.5</span></div>
+        </div>
+        <p class="muted small" style="padding:0 4px">Health data stays on this phone and your own server. It is only sent to the plan service when you build a plan.</p>
+      </div>
+      <nav class="nav" data-nav></nav>
+    </section>
+
+    <!-- ================= CHAT SHEET ================= -->
+    <div class="scrim" id="scrim"></div>
+    <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="Ask for changes">
+      <div class="grab"></div>
+      <div class="sheet-h">
+        <h3>Ask for changes</h3>
+        <button class="icon-btn" id="closeSheet" aria-label="Close"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+      </div>
+      <div class="msgs" id="msgs">
+        <div class="msg bot">Tell me what to change about today's plan. You can also paste a Garmin activity link.</div>
+      </div>
+      <div class="chips row suggest">
+        <button class="chip" data-say="I only slept 4 hours">I only slept 4 hours</button>
+        <button class="chip" data-say="I don't like this plan">I don't like this plan</button>
+        <button class="chip" data-say="Make the hills shorter">Make the hills shorter</button>
+      </div>
+      <form class="composer" id="composer">
+        <input id="chatInput" placeholder="Type a request" autocomplete="off" aria-label="Request">
+        <button type="submit" aria-label="Send"><svg class="i" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      </form>
+    </div>
+
+    <div class="toast" id="toast" role="status"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Data ---------- */
+const BASE = [
+  { dur: 5, speed: 4.5, inc: 1, label: "Warm-up" },
+  { dur: 5, speed: 5.5, inc: 4, label: "First hill" },
+  { dur: 3, speed: 5.0, inc: 2, label: "Recover" },
+  { dur: 5, speed: 5.5, inc: 6, label: "Second hill" },
+  { dur: 3, speed: 5.0, inc: 2, label: "Recover" },
+  { dur: 5, speed: 5.8, inc: 8, label: "Top hill" },
+  { dur: 4, speed: 5.2, inc: 3, label: "Come down" },
+  { dur: 5, speed: 4.5, inc: 1, label: "Cool-down" },
+];
+const STYLES = [
+  { id: "steady", name: "Long steady", desc: "One pace the whole way", s: [5,5,5,5,5,5], i: [2,2,2,2,2,2] },
+  { id: "easy", name: "Easy", desc: "Relaxed, low effort", s: [4,4.3,4.3,4.3,4.3,4], i: [1,1,1,1,1,1] },
+  { id: "flat", name: "No incline", desc: "Flat, speed changes only", s: [4.5,5.5,5,5.8,5.2,4.5], i: [0,0,0,0,0,0] },
+  { id: "hills", name: "Hills", desc: "Climbs with recoveries", s: [4.5,5.5,5,5.5,5,4.5], i: [1,5,2,8,3,1] },
+  { id: "hiit", name: "HIIT", desc: "Short hard bursts", s: [4.5,7,4.5,7,4.5,7,4.5], i: [1,3,1,3,1,3,1] },
+  { id: "intervals", name: "Intervals", desc: "Even work and rest blocks", s: [4.5,6,5,6,5,6,4.5], i: [1,2,1,2,1,2,1] },
+  { id: "pyramid", name: "Pyramid", desc: "Build up, then step back down", s: [4.5,5,5.5,6,5.5,5,4.5], i: [1,3,5,7,5,3,1], wide: true },
+];
+const HISTORY = [
+  { day: "Yesterday", title: "Pyramid", min: 40, km: 3.4, s: [4.5,5,5.5,6,5.5,5,4.5], i: [1,3,5,7,5,3,1] },
+  { day: "Fri 6 Nov", title: "Easy, low sleep", min: 25, km: 1.8, s: [4,4.3,4.3,4], i: [1,1,1,1] },
+  { day: "Wed 4 Nov", title: "Rolling hills", min: 35, km: 3.0, s: [4.5,5.5,5,5.5,5,4.5], i: [1,4,2,6,3,1] },
+  { day: "Mon 2 Nov", title: "Intervals", min: 42, km: 3.9, s: [4.5,6,5,6,5,6,4.5], i: [1,2,1,2,1,2,1] },
+  { day: "Sat 31 Oct", title: "Long steady", min: 60, km: 5.1, s: [5,5,5,5], i: [2,2,2,2] },
+];
+
+let adj = { shorter: false, easier: false, flat: false };
+let plan = BASE;
+
+function buildPlan() {
+  let p = BASE.map(s => ({ ...s }));
+  if (adj.shorter) p = p.map(s => ({ ...s, dur: Math.max(2, Math.round(s.dur * 0.7)) }));
+  if (adj.easier) p = p.map(s => ({ ...s, speed: +(s.speed - 0.4).toFixed(1), inc: Math.round(s.inc * 0.6) }));
+  if (adj.flat) p = p.map(s => ({ ...s, inc: 0 }));
+  plan = p;
+}
+const total = p => p.reduce((a, s) => a + s.dur, 0);
+const range = (p, k) => { const v = p.map(s => s[k]); const lo = Math.min(...v), hi = Math.max(...v); return lo === hi ? `${lo}` : `${lo}–${hi}`; };
+const mmss = sec => `${Math.floor(sec / 60)}:${String(Math.floor(sec % 60)).padStart(2, "0")}`;
+
+/* ---------- Chart ---------- */
+const SMAX = 8, IMAX = 12;
+function stepChart(steps, o = {}) {
+  const W = 360, H = o.h || 150, dark = o.dark;
+  const pad = { l: o.axes ? 30 : 4, r: o.axes ? 30 : 4, t: 8, b: o.axes ? 22 : 4 };
+  const iw = W - pad.l - pad.r, ih = H - pad.t - pad.b, T = total(steps);
+  const x = t => pad.l + t / T * iw;
+  const ys = v => pad.t + (1 - v / SMAX) * ih;
+  const yi = v => pad.t + (1 - v / IMAX) * ih;
+  const base = pad.t + ih;
+  let t = 0, area = `M${x(0)},${base}`, sp = "";
+  steps.forEach((s, k) => {
+    const a = x(t), b = x(t + s.dur);
+    area += `L${a},${yi(s.inc)}L${b},${yi(s.inc)}`;
+    sp += (k ? `L${a},${ys(s.speed)}` : `M${a},${ys(s.speed)}`) + `L${b},${ys(s.speed)}`;
+    t += s.dur;
+  });
+  area += `L${x(T)},${base}Z`;
+  const planned = !!o.actual;
+  const grid = dark ? "rgba(255,255,255,.1)" : "#E6EAF1";
+  const lab = dark ? "#9BA8BF" : "#8592A8";
+  let g = "";
+  if (o.axes) {
+    [0, 4, 8].forEach(v => {
+      g += `<line x1="${pad.l}" x2="${W - pad.r}" y1="${ys(v)}" y2="${ys(v)}" stroke="${grid}"/>`;
+      g += `<text x="${pad.l - 6}" y="${ys(v) + 4}" text-anchor="end" fill="#2D5BE3" font-size="11" font-weight="600">${v}</text>`;
+      g += `<text x="${W - pad.r + 6}" y="${ys(v) + 4}" fill="#C47D17" font-size="11" font-weight="600">${v * IMAX / SMAX}%</text>`;
+    });
+    [0, Math.round(T / 2), T].forEach(m => g += `<text x="${x(m)}" y="${H - 4}" text-anchor="middle" fill="${lab}" font-size="11">${m} min</text>`);
+  }
+  let act = "";
+  if (o.actual) {
+    const ai = o.actual.map(([tm, , inc], k) => `${k ? "L" : "M"}${x(tm)},${yi(inc)}`).join("");
+    const as = o.actual.map(([tm, s], k) => `${k ? "L" : "M"}${x(tm)},${ys(s)}`).join("");
+    act = `<path d="${ai}" fill="none" stroke="#E8992A" stroke-width="3" stroke-linejoin="round"/>
+           <path d="${as}" fill="none" stroke="#2D5BE3" stroke-width="3" stroke-linejoin="round"/>`;
+  }
+  let now = "";
+  if (o.now != null) {
+    now = `<rect x="${pad.l}" y="${pad.t}" width="${Math.max(0, x(o.now) - pad.l)}" height="${ih}" fill="${dark ? "rgba(21,35,59,.55)" : "rgba(255,255,255,.6)"}"/>
+           <line x1="${x(o.now)}" x2="${x(o.now)}" y1="${pad.t - 4}" y2="${base}" stroke="#fff" stroke-width="2.5"/>`;
+  }
+  const incFill = planned ? "none" : (dark ? "rgba(232,153,42,.35)" : "#FCEFD9");
+  const incStroke = planned ? "#B5BFD0" : "#E8992A";
+  const spStroke = planned ? "#8592A8" : (dark ? "#8EA9FF" : "#2D5BE3");
+  const dash = planned ? `stroke-dasharray="5 4"` : "";
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" ${o.stretch ? 'preserveAspectRatio="none" height="100%"' : ""} role="img" aria-label="${o.label || "Speed and incline over time"}" style="display:block">
+    ${g}
+    <path d="${area}" fill="${incFill}" stroke="${incStroke}" stroke-width="${planned ? 1.5 : 2}" ${dash} vector-effect="non-scaling-stroke"/>
+    <path d="${sp}" fill="none" stroke="${spStroke}" stroke-width="${planned ? 2 : (o.stretch ? 2.5 : 3.5)}" stroke-linejoin="round" ${dash} vector-effect="non-scaling-stroke"/>
+    ${act}${now}
+  </svg>`;
+}
+function miniChart(s, i, h = 40) {
+  return stepChart(s.map((v, k) => ({ dur: 1, speed: v, inc: i[k] })), { h, label: "", stretch: true });
+}
+
+/* ---------- Render ---------- */
+function renderPlan() {
+  buildPlan();
+  const T = total(plan);
+  const name = adj.flat ? "Flat tempo" : adj.easier ? "Gentle hills" : "Rolling hills";
+  document.getElementById("homeTitle").textContent = name;
+  document.getElementById("homeDur").textContent = T;
+  document.getElementById("homeSpeed").textContent = range(plan, "speed");
+  document.getElementById("homeInc").textContent = range(plan, "inc");
+  document.getElementById("homeChart").innerHTML = stepChart(plan, { h: 110 });
+  document.getElementById("prevTitle").textContent = `${name}, ${T} min`;
+  document.getElementById("prevChart").innerHTML = stepChart(plan, { axes: true, h: 190 });
+  let t = 0;
+  document.getElementById("stepList").innerHTML = plan.map(s => {
+    const row = `<div class="step-row"><span class="t">${t}:00</span>
+      <span class="v s">${s.speed.toFixed(1)}<small>km/h</small></span>
+      <span class="v n">${s.inc}<small>%</small></span>
+      <span></span><span class="lbl">${s.label}, ${s.dur} min</span></div>`;
+    t += s.dur; return row;
+  }).join("");
+}
+
+document.getElementById("styles").innerHTML = STYLES.map(s =>
+  `<button class="style-card${s.wide ? " wide" : ""}" aria-pressed="${s.id === "hills"}" data-style="${s.id}">
+    ${miniChart(s.s, s.i)}<b>${s.name}</b><small>${s.desc}</small></button>`).join("");
+
+document.getElementById("histList").innerHTML = HISTORY.map(h =>
+  `<button class="hist-item" data-go="summary">${miniChart(h.s, h.i, 36)}
+    <span class="t"><b>${h.title}</b><small>${h.day}</small></span>
+    <span class="m">${h.min}<small>${h.km} km</small></span></button>`).join("");
+
+const WEEK = [["M", 35], ["T", 0], ["W", 35], ["T", 0], ["F", 25], ["S", 0], ["S", 40], ["M", 0]].slice(0, 7);
+document.getElementById("week").innerHTML = WEEK.map(([d, m]) =>
+  `<div><i class="${m ? "" : "zero"}" style="${m ? `height:${m / 60 * 100}%` : ""}"></i><span>${d}</span></div>`).join("");
+
+const actual = (() => {
+  // planned vs actual: user dropped the top hill from 8% to 6% after 2 min, and stopped 1 min early
+  const pts = []; let t = 0;
+  BASE.forEach((s, k) => {
+    for (let m = 0; m < s.dur; m += 0.5) {
+      const tm = t + m; if (tm > 34) break;
+      let sp = s.speed + Math.sin(tm * 1.7) * 0.06, inc = s.inc;
+      if (k === 5 && m >= 2) { inc = 6; sp = 5.6; }
+      if (m === 0 && k) { sp = (s.speed + BASE[k - 1].speed) / 2; }
+      pts.push([tm, +sp.toFixed(2), inc]);
+    }
+    t += s.dur;
+  });
+  pts.push([34, 4.5, 1]);
+  return pts;
+})();
+document.getElementById("sumChart").innerHTML = stepChart(BASE, { axes: true, h: 190, actual, label: "Planned versus actual speed and incline" });
+
+/* ---------- Navigation ---------- */
+const SCREENS = [["home", "Home"], ["setup", "Set up plan"], ["preview", "Plan preview"], ["run", "Run mode"], ["summary", "Summary"], ["history", "History"], ["profile", "Profile"]];
+const ICONS = {
+  home: '<path d="M4 11l8-7 8 7v9h-5v-6h-6v6H4z"/>',
+  history: '<path d="M4 20V10M10 20V4M16 20v-8M22 20H2"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/>',
+};
+document.querySelectorAll("[data-nav]").forEach(n => {
+  n.innerHTML = ["home", "history", "profile"].map(id =>
+    `<button data-go="${id}" data-navbtn="${id}"><svg class="i" viewBox="0 0 24 24">${ICONS[id]}</svg>${id[0].toUpperCase() + id.slice(1)}</button>`).join("");
+});
+document.getElementById("guideList").innerHTML = SCREENS.map(([id, n], k) =>
+  `<li><button data-go="${id}" data-guide="${id}"><span>${k + 1}</span>${n}</button></li>`).join("");
+
+let current = "home";
+function go(id) {
+  if (current === "run" && id !== "run") stopTimer();
+  current = id;
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === id));
+  document.querySelectorAll("[data-navbtn]").forEach(b => b.setAttribute("aria-current", b.dataset.navbtn === id));
+  document.querySelectorAll("[data-guide]").forEach(b => b.setAttribute("aria-current", b.dataset.guide === id));
+  if (id === "setup") setStep(1);
+  if (id === "run") startRun();
+  closeSheet();
+}
+
+document.addEventListener("click", e => {
+  const g = e.target.closest("[data-go]");
+  if (g) { if (g.dataset.toast) toast(g.dataset.toast); go(g.dataset.go); return; }
+  const t = e.target.closest("[data-toast]");
+  if (t) toast(t.dataset.toast);
+  if (e.target.closest("[data-chat]")) openSheet();
+
+  const a = e.target.closest("[data-adj]");
+  if (a) {
+    adj[a.dataset.adj] = !adj[a.dataset.adj];
+    a.setAttribute("aria-pressed", adj[a.dataset.adj]);
+    renderPlan();
+  }
+  const single = e.target.closest("[data-single] > button");
+  if (single) single.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b === single));
+  const multi = e.target.closest("[data-multi] > button");
+  if (multi) multi.setAttribute("aria-pressed", multi.getAttribute("aria-pressed") !== "true");
+  const st = e.target.closest("[data-style]");
+  if (st) document.querySelectorAll("[data-style]").forEach(b => b.setAttribute("aria-pressed", b === st));
+  const sw = e.target.closest(".switch");
+  if (sw) {
+    const on = sw.getAttribute("aria-checked") !== "true";
+    sw.setAttribute("aria-checked", on);
+    sw.closest("[data-cond]").classList.toggle("on", on);
+  }
+  const stp = e.target.closest("[data-stepper] button");
+  if (stp) {
+    const box = stp.parentElement, out = box.querySelector("output");
+    const step = +box.dataset.step, dec = step < 1 ? 1 : 0;
+    const v = parseFloat(out.textContent) + (stp.getAttribute("aria-label") === "Increase" ? step : -step);
+    out.textContent = v.toFixed(dec) + box.dataset.unit;
+  }
+});
+
+/* ---------- Setup flow ---------- */
+let setupStep = 1;
+const timeRange = document.getElementById("timeRange");
+function setTime(v) {
+  timeRange.value = v;
+  document.getElementById("timeVal").textContent = v;
+  timeRange.style.setProperty("--p", ((v - 10) / 80 * 100) + "%");
+}
+timeRange.addEventListener("input", () => setTime(timeRange.value));
+document.getElementById("timeChips").addEventListener("click", e => { const c = e.target.closest("[data-t]"); if (c) setTime(c.dataset.t); });
+const sleepRange = document.getElementById("sleepRange");
+sleepRange.addEventListener("input", () => {
+  document.getElementById("sleepVal").textContent = sleepRange.value + "h";
+  sleepRange.style.setProperty("--p", ((sleepRange.value - 3) / 5 * 100) + "%");
+});
+sleepRange.style.setProperty("--p", "40%");
+setTime(35);
+
+function setStep(n) {
+  setupStep = n;
+  [1, 2, 3].forEach(k => document.getElementById("setup" + k).hidden = k !== n);
+  document.querySelectorAll("#setup .steps span").forEach((s, k) => s.classList.toggle("on", k < n));
+  document.getElementById("setupStepName").textContent = `Step ${n} of 3`;
+  document.getElementById("setupNext").textContent = n === 3 ? "Build my plan" : "Next";
+}
+document.getElementById("setupNext").addEventListener("click", () => setupStep < 3 ? setStep(setupStep + 1) : (toast("Plan built"), go("preview")));
+document.getElementById("setupBack").addEventListener("click", () => setupStep > 1 ? setStep(setupStep - 1) : go("home"));
+
+/* ---------- Run mode ---------- */
+let elapsed = 0, timer = null, paused = false, lastIdx = -1;
+function stepAt(sec) {
+  let t = 0;
+  for (let k = 0; k < plan.length; k++) { const end = t + plan[k].dur * 60; if (sec < end) return { k, start: t, end }; t = end; }
+  return { k: plan.length - 1, start: t, end: t };
+}
+function renderRun() {
+  const T = total(plan) * 60;
+  if (elapsed >= T) { stopTimer(); go("summary"); return; }
+  const { k, start, end } = stepAt(elapsed);
+  const s = plan[k], n = plan[k + 1];
+  document.getElementById("runLeft").textContent = mmss(T - elapsed);
+  document.getElementById("runSpeed").textContent = s.speed.toFixed(1);
+  document.getElementById("runInc").textContent = s.inc;
+  document.getElementById("runCount").textContent = mmss(end - elapsed);
+  document.getElementById("runProg").style.width = ((elapsed - start) / (end - start) * 100) + "%";
+  document.getElementById("runNext").innerHTML = n
+    ? `<span class="s">${n.speed.toFixed(1)} km/h</span>, <span class="n">${n.inc}% incline</span>`
+    : "Finish";
+  document.getElementById("runChart").innerHTML = stepChart(plan, { h: 64, dark: true, now: elapsed / 60, label: "Workout progress" });
+  if (lastIdx !== -1 && k !== lastIdx) announce(s, plan[lastIdx]);
+  lastIdx = k;
+}
+function announce(s, prev) {
+  const parts = [];
+  if (s.speed !== prev.speed) { parts.push(`speed to ${s.speed.toFixed(1)}`); flash("mSpeed"); }
+  if (s.inc !== prev.inc) { parts.push(`incline to ${s.inc}%`); flash("mInc"); }
+  const b = document.getElementById("banner");
+  b.textContent = parts.length ? "Set " + parts.join(" and ") : s.label;
+  b.classList.add("show");
+  setTimeout(() => b.classList.remove("show"), 3500);
+  if (navigator.vibrate) navigator.vibrate([120, 80, 120]);
+}
+function flash(id) { const el = document.getElementById(id); el.classList.remove("flash"); void el.offsetWidth; el.classList.add("flash"); }
+function startRun() {
+  elapsed = 0; lastIdx = -1; paused = false; setPauseUI();
+  renderRun(); stopTimer();
+  timer = setInterval(() => { if (!paused) { elapsed++; renderRun(); } }, 1000);
+}
+function stopTimer() { clearInterval(timer); timer = null; }
+function setPauseUI() {
+  document.getElementById("pauseTxt").textContent = paused ? "Resume" : "Pause";
+  document.getElementById("pauseIcon").innerHTML = paused
+    ? '<path d="M7 4.5v15l13-7.5z" fill="currentColor" stroke="none"/>'
+    : '<path d="M8 5v14M16 5v14" stroke-width="3.5"/>';
+}
+document.getElementById("pauseBtn").addEventListener("click", () => { paused = !paused; setPauseUI(); });
+document.getElementById("stopBtn").addEventListener("click", () => { stopTimer(); go("summary"); });
+document.getElementById("skipBtn").addEventListener("click", () => { elapsed = stepAt(elapsed).end - 3; renderRun(); });
+
+/* ---------- Chat sheet ---------- */
+const sheet = document.getElementById("sheet"), scrim = document.getElementById("scrim");
+function openSheet() { sheet.classList.add("show"); scrim.classList.add("show"); }
+function closeSheet() { sheet.classList.remove("show"); scrim.classList.remove("show"); }
+scrim.addEventListener("click", closeSheet);
+document.getElementById("closeSheet").addEventListener("click", closeSheet);
+const REPLIES = {
+  sleep: { text: "With 4 hours of sleep I'd keep your heart rate in zone 2. New plan: 30 min easy walk, 4.3–4.8 km/h, incline up to 3%.", fn: () => { adj.easier = true; adj.shorter = true; } },
+  dislike: { text: "What would you change? Here's a flat option instead: same 35 min, no incline, speed between 4.5 and 5.8 km/h.", fn: () => { adj.flat = true; } },
+  other: { text: "Done. I kept your total time and made each hill 1 minute shorter, with longer recoveries.", fn: () => {} },
+};
+function say(text) {
+  const msgs = document.getElementById("msgs");
+  msgs.insertAdjacentHTML("beforeend", `<div class="msg me"></div>`);
+  msgs.lastElementChild.textContent = text;
+  const r = /sleep|slept|tired/i.test(text) ? REPLIES.sleep : /like|hate|change|different/i.test(text) ? REPLIES.dislike : REPLIES.other;
+  setTimeout(() => {
+    msgs.insertAdjacentHTML("beforeend", `<div class="msg bot">${r.text}<br><button class="apply">Use this plan</button></div>`);
+    msgs.lastElementChild.querySelector(".apply").addEventListener("click", () => {
+      r.fn(); Object.keys(adj).forEach(k => document.querySelector(`[data-adj="${k}"]`).setAttribute("aria-pressed", adj[k]));
+      renderPlan(); closeSheet(); toast("Plan updated");
+    });
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 600);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+document.querySelectorAll("[data-say]").forEach(b => b.addEventListener("click", () => say(b.dataset.say)));
+document.getElementById("composer").addEventListener("submit", e => {
+  e.preventDefault(); const i = document.getElementById("chatInput");
+  if (i.value.trim()) { say(i.value.trim()); i.value = ""; }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+let toastT;
+function toast(msg) {
+  const t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove("show"), 2200);
+}
+
+renderPlan();
+go((location.hash.slice(2) in {home:1,setup:1,preview:1,run:1,summary:1,history:1,profile:1}) ? location.hash.slice(2) : "home");
+</script>
+</body>
+</html>
